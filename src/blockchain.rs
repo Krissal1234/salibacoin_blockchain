@@ -1,31 +1,41 @@
 use crate::block::Block;
 use crate::errors::Result;
-use sled;
+use crate::transaction::Transaction;
+use sled::{self, transaction};
 
 #[derive(Debug)]
-pub struct Blockchain{
+pub struct Blockchain {
     blocks: Vec<Block>,
     db: sled::Db,
 }
-
-const TARGET_HEX: usize = 4; //difficulty target for mining,
 
 impl Blockchain {
     pub fn new() -> Blockchain {
         let block = Block::new_genesis_block();
         let new_db = sled::open("blockchain_db").unwrap();
 
-        //add genisis block to db
-
-        Blockchain{
+        Blockchain {
             blocks: vec![block],
-            db:new_db
+            db: new_db,
         }
     }
-    // pub fn add_block(&mut self, data: String) -> Result<()> {
-    //     let prev = self.blocks.last().unwrap();
-    //     let new_block  = Block::new_block(data, prev.get_hash(), TARGET_HEX)?;
-    //     self.blocks.push(new_block);
-    //     Ok(())
-// }
+    pub fn add_block(&mut self, transactions: &[Transaction]) -> Result<()> {
+        //getting last block
+        let prev = self.blocks.last().unwrap();
+        let new_block = Block::new_block(
+            transactions,
+            prev.get_block_id(),
+            prev.get_hash(),
+            self.blocks.len(),
+        )?;
+        //At this point we have to somehow check if someon has beaten us I assume
+        self.blocks.push(new_block);
+        //reward SalibaCoin
+        Ok(())
+    }
+    pub fn print_blockchain(&self){
+        for block in &self.blocks {
+            println!("{:#?}", block);
+        }
+    }
 }
